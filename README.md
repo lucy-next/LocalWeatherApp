@@ -2,7 +2,7 @@
     <h1>Local Weather Webapp</h1>
     <br>
     <p>Made with HTML, CSS & JS.</p>
-    <p>No Backend, no Accounts.</p>
+    <p>No Backend, just Frontend.</p>
     <p>Connects to public APIs to gather needed data.</p>
     <br>
     <p>To deploy copy the .env.ex and fill it with ur API Keys.</p>
