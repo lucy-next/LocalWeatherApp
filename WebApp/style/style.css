@@ -1,0 +1,201 @@
+/* General Styling */
+
+.app {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.input {
+    width: 250px;
+}
+
+.delete-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+/* Search Styling */
+
+.searchbar-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 75px;
+    width: 100%;
+}
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    width: 250px;
+    max-height: 400px;
+    margin-top: 6px;
+    overflow-y: auto;
+    z-index: 999;
+}
+
+.suggestion-item {
+    background: var(--muted);
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    border-style: var(--tw-border-style);
+    border-color: var(--color-input);
+    border-width: 1px;
+}
+.suggestion-item:hover {
+    background: rgba(0,0,0,0.04);
+}
+
+/* Weather Card Styling */
+
+.card {
+    width: 60vw;
+    max-width: 1000px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.card-body {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    width: 100%;
+    min-height: 200px;
+}
+
+.card-left {
+    flex: 1 1 50%;
+    max-width: inherit;
+    margin: 10px;
+    min-width: 0;
+    height: 100%;
+}
+
+.card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid aliceblue;
+}
+
+.card-right {
+    flex: 1 1 50%;
+    max-width: inherit;
+    margin: 10px;
+    min-width: 0;
+    height: 100%;
+}
+
+.iconWrap {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.temperature {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.description {
+    font-size: 13px;
+    color: #666;
+}
+
+/* Webcam Carousel Styling */
+
+.webcam-carousel {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 56.25%;
+    overflow: hidden;
+}
+
+.webcam-display {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.webcam-item {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+.webcam-item.active {
+    display: block;
+}
+
+.carousel-control {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    padding: 0;
+    transition: transform 0.2s ease;
+}
+
+.carousel-control:hover {
+    transform: translateY(-50%) scale(1.1);
+}
+
+.prev-control {
+    left: 8px;
+}
+
+.next-control {
+    right: 8px;
+}
+
+.carousel-control svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 3;
+    fill: none;
+}
+
+/* Wind info styling */
+.wind-info {
+    display: flex;
+    gap: 8px;
+}
+
+/* Remove Entry */
+
+.remove-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+}
+
+/* Reorder Entry */
+
+.reorder-handle {
+
+}
