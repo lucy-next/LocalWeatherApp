@@ -1,9 +1,7 @@
 'use strict';
 
-// scripts/datamgr.js
-// Manages weatherdata[] in localStorage (NO DOM CODE)
-
-const STORAGE_KEY = 'weatherdata';
+let STORAGE_KEY = sessionStorage.getItem('STORAGE_KEY') || '';
+STORAGE_KEY += "_data";
 
 /* read array from localStorage */
 export function getAll() {
@@ -72,19 +70,28 @@ export function clearAll() {
 
 /* move city from one index to another */
 export function moveEntry(fromIndex, toIndex) {
-    const arr = getAll();
-    if (fromIndex < 0 || fromIndex >= arr.length) return;
-    if (toIndex < 0) toIndex = 0;
-    if (toIndex >= arr.length) toIndex = arr.length - 1;
+    const entries = getAll();
+    if (fromIndex < 0 || fromIndex >= entries.length || toIndex < 0 || toIndex >= entries.length) {
+        console.error('Invalid indices for moveEntry:', fromIndex, toIndex);
+        return;
+    }
 
-    const item = arr[fromIndex];
-    arr.splice(fromIndex, 1);
-    arr.splice(toIndex, 0, item);
+    // Reindex all entries to ensure they are sequential
+    entries.forEach((entry, index) => {
+        entry.display_index = index;
+    });
 
-    fixIndexes(arr);
-    saveAll(arr);
+    // Move the entry from fromIndex to toIndex
+    const [movedEntry] = entries.splice(fromIndex, 1);
+    entries.splice(toIndex, 0, movedEntry);
+
+    // Update the display indices
+    entries.forEach((entry, index) => {
+        entry.display_index = index;
+    });
+
+    saveAll(entries);
 }
-
 /* update an existing entry */
 export function updateEntry(display_index, newData) {
     const arr = getAll();
@@ -98,4 +105,44 @@ export function updateEntry(display_index, newData) {
 
     fixIndexes(arr);
     saveAll(arr);
+}
+
+/* create a new entry object from data */
+function createEntry(data, index) {
+    return {
+        city: data.city || '',
+        state: data.state || '',
+        country: data.country || '',
+        country_code: (data.country_code || '').toUpperCase(),
+        lat: Number(data.lat),
+        lon: Number(data.lon),
+        display_name: data.display_name || '',
+        display_index: index
+    };
+}
+
+/* find index of entry by display_index */
+function findEntryIndex(arr, display_index) {
+    for (let i = 0; i < arr.length; i++) {
+        if (arr[i].display_index === display_index) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+/* validate and adjust move indices */
+function validateMoveIndices(arr, fromIndex, toIndex) {
+    if (fromIndex < 0 || fromIndex >= arr.length) return null;
+    if (toIndex < 0) toIndex = 0;
+    if (toIndex >= arr.length) toIndex = arr.length - 1;
+    return { fromIndex, toIndex };
+}
+
+/* move item in array */
+function moveItemInArray(arr, fromIndex, toIndex) {
+    const item = arr[fromIndex];
+    arr.splice(fromIndex, 1);
+    arr.splice(toIndex, 0, item);
+    return arr;
 }

@@ -7,6 +7,13 @@
     justify-content: center;
 }
 
+.center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
 .input {
     width: 250px;
 }
@@ -59,8 +66,8 @@
 .card {
     width: 60vw;
     max-width: 1000px;
-    margin: 0 auto;
     position: relative;
+    margin-bottom: 20px;
 }
 
 .card-body {
@@ -101,14 +108,26 @@
     align-items: center;
 }
 
+/* Temperature Styling */
+.temp-container {
+    display: flex;
+    align-items: flex-start;
+}
+
 .temperature {
     font-size: 18px;
     font-weight: 600;
 }
 
+.feels-like {
+    font-size: 14px;
+    color: var(--color-muted-foreground);
+    margin-left: 10px;
+}
+
 .description {
-    font-size: 13px;
-    color: #666;
+    font-size: 14px;
+    color: var(--color-muted-foreground);
 }
 
 /* Webcam Carousel Styling */
@@ -194,8 +213,74 @@
     z-index: 10;
 }
 
-/* Reorder Entry */
+/* Forecast Styling */
 
-.reorder-handle {
+.forecast-container {
+    margin-top: 16px;
+    border-top: 1px solid #eee;
+    padding-top: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
 
+.forecast-row {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.forecast-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.forecast-day {
+    width: 40px;
+    font-size: 12px;
+    text-align: center;
+}
+
+.forecast-temp {
+    width: 60px;
+    font-size: 12px;
+    text-align: center;
+}
+
+.forecast-rain {
+    width: 40px;
+    font-size: 12px;
+    text-align: center;
+}
+
+.logout  {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+/* Login Window */
+
+.login {
+    height: 50vh;
+    width: 30vw;
+}
+
+.login-lbl {
+    margin-bottom: 5px;
+}
+
+.signup {
+    margin-left: 10px;
+    background: var(--color-muted-foreground);
+    color: var(--color-foreground);
+}
+
+.gap-2 {
+    margin-top: 12px;
 }

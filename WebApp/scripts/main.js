@@ -8,6 +8,8 @@ LoadSearch();
 initCards();
 renderCards();
 
+
+
 // Handle Delete All Button
 const deleteButton = document.getElementById('delete');
 if (deleteButton) {
@@ -15,4 +17,17 @@ if (deleteButton) {
         clearAll();
         renderCards();
     });
+}
+
+// Handle Log Out
+
+let logoutcontainer = document.getElementById("logout-btn");
+
+logoutcontainer.addEventListener('click', () => {
+    LogOut();
+})
+
+function LogOut () {
+    window.STORAGE_KEY = "";
+    window.location.href = "/LocalWeather-WorkExample/WebApp/index.html";
 }

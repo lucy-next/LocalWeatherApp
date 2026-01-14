@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Local Weather</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/basecoat-css@0.3.10-beta.2/dist/basecoat.cdn.min.css" type="text/css"/>
+    <script src="https://cdn.jsdelivr.net/npm/basecoat-css@0.3.10-beta.2/dist/js/all.min.js" defer></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.12/css/weather-icons.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.12/css/weather-icons-wind.min.css" />
+
+    <link rel="stylesheet" href="style/style.css" type="text/css">
+</head>
+<body>
+    <div class="app">
+        <div class="searchbar-container">
+            <input class="input" type="text" id="searchbar" placeholder="Search for a city..." />
+            <div class="search-results">
+
+            </div>
+            <button type="button" class="btn-destructive w-full logout" id="logout-btn">Log Out</button>
+        </div>
+        <div class="weather-container w-full">
+
+        </div>
+        <div class="delete-container">
+            <div>
+                <button class="btn-destructive" id="delete">Delete ALL Data</button>
+            </div>
+        </div>
+    </div>
+</body>
+<script type="module" src="scripts/main.js" defer></script>
+<script src="scripts/secrets/config.js"></script>
+</html>

@@ -1,37 +1,9 @@
 'use strict';
 
-import { addEntry, getAll, removeEntry } from './datamgr.js';
+import * as datamgr from './datamgr.js';
 
-export function renderCards() {
-    (async function run() {
-        const container = getContainer();
-        if (!container) return;
-
-        container.innerHTML = '';
-
-        const cities = getAll();
-        if (!cities || cities.length === 0) return;
-
-        const cfg = window.APP_CONFIG || {};
-        const OWM_KEY = cfg.WEATHER_API_KEY || '';
-        const WINDY_KEY = cfg.WINDY_API_KEY || '';
-
-        if (!OWM_KEY) console.warn('OpenWeatherMap API key missing (window.APP_CONFIG.WEATHER_API_KEY)');
-        if (!WINDY_KEY) console.warn('Windy API key missing (window.APP_CONFIG.WINDY_API_KEY)');
-
-        for (let i = 0; i < cities.length; i++) {
-            const city = cities[i];
-            const loading = createLoadingCard(city.city);
-            container.appendChild(loading);
-
-            const weather = await loadWeather(city, OWM_KEY);
-            const webcam = await loadWebcam(city, WINDY_KEY);
-
-            const card = createCard(city, weather, webcam);
-            container.replaceChild(card, loading);
-        }
-    })();
-}
+let draggingIndex = 0;
+let targetIndex = 0;
 
 export function initCards() {
     const results = document.querySelector('.search-results');
@@ -46,7 +18,7 @@ export function initCards() {
         if (input) input.value = '';
         results.innerHTML = '';
 
-        const all = getAll();
+        const all = datamgr.getAll();
         const sameLatLon = all.some(e => Math.abs(Number(e.lat) - Number(place.lat)) < 1e-6 && Math.abs(Number(e.lon) - Number(place.lon)) < 1e-6);
         const sameCityCountry = all.some(e => String(e.city || '').trim().toLowerCase() === String(place.city || '').trim().toLowerCase()
             && String(e.country_code || '').trim().toLowerCase() === String(place.country_code || '').trim().toLowerCase());
@@ -57,12 +29,58 @@ export function initCards() {
             return;
         }
 
-        addEntry(place);
+        datamgr.addEntry(place);
         renderCards();
     });
 }
 
-/* helpers */
+function showBasecoatToast(category, title, description) {
+    document.dispatchEvent(new CustomEvent('basecoat:toast', {
+        detail: {
+            config: {
+                category: category,
+                title: title,
+                description: description,
+                cancel: { label: 'Dismiss' }
+            }
+        }
+    }));
+}
+
+export function renderCards() {
+    (async function run() {
+        const container = getContainer();
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        const cities = datamgr.getAll();
+        if (!cities || cities.length === 0) return;
+
+        const cfg = window.APP_CONFIG || {};
+        const OWM_KEY = cfg.WEATHER_API_KEY || '';
+        const WINDY_KEY = cfg.WINDY_API_KEY || '';
+
+        if (!OWM_KEY) console.warn('OpenWeatherMap API key missing (window.APP_CONFIG.WEATHER_API_KEY)');
+        if (!WINDY_KEY) console.warn('Windy API key missing (window.APP_CONFIG.WINDY_API_KEY)');
+
+        // Sort cities by display_index
+        cities.sort((a, b) => a.display_index - b.display_index);
+
+        for (let i = 0; i < cities.length; i++) {
+            const city = cities[i];
+            const loading = createLoadingCard(city.city);
+            container.appendChild(loading);
+
+            const weather = await loadWeather(city, OWM_KEY);
+            const webcam = await loadWebcam(city, WINDY_KEY);
+            const forecast = await loadForecast(city, OWM_KEY);
+
+            const card = createCard(city, weather, webcam, forecast);
+            container.replaceChild(card, loading);
+        }
+    })();
+}
 
 function getContainer() {
     let c = document.querySelector('.weather-container');
@@ -106,6 +124,35 @@ async function loadWeather(city, key) {
     } catch (e) {
         console.error('OWM fetch error', e);
         showBasecoatToast('error', 'Weather error', 'Could not fetch weather');
+        return null;
+    }
+}
+
+async function loadForecast(city, key) {
+    if (!key) {
+        console.warn('Skipping forecast fetch: WEATHER_API_KEY not set');
+        return null;
+    }
+
+    try {
+        const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${city.lat}&lon=${city.lon}&units=metric&appid=${key}`;
+        const r = await fetch(url);
+        if (!r.ok) {
+            let txt = '';
+            try { txt = await r.text(); } catch {}
+            console.error('Forecast fetch failed:', r.status, txt);
+            showBasecoatToast('error', 'Forecast error', `OpenWeatherMap error ${r.status}`);
+            return null;
+        }
+        const j = await r.json();
+        if (!j || !j.list || j.list.length === 0) {
+            console.warn('Forecast returned no usable data for', city, j);
+            return null;
+        }
+        return j;
+    } catch (e) {
+        console.error('Forecast fetch error', e);
+        showBasecoatToast('error', 'Forecast error', 'Could not fetch forecast');
         return null;
     }
 }
@@ -155,9 +202,14 @@ async function loadWebcam(city, key) {
     }
 }
 
-function createCard(city, weather, webcams) {
+function createCard(city, weather, webcams, forecast) {
     const card = document.createElement('div');
-    card.className = 'card w-full';
+    card.className = 'card w-full draggable';
+    card.draggable = true;
+    card.dataset.index = city.display_index;
+
+    const body = document.createElement('div');
+    body.className = 'card-body';
 
     // Create delete button
     const deleteBtn = document.createElement('button');
@@ -166,9 +218,6 @@ function createCard(city, weather, webcams) {
     deleteBtn.addEventListener('click', () => {
         deleteEntry(city.display_index);
     });
-
-    const body = document.createElement('div');
-    body.className = 'card-body';
 
     // Add delete button to the card
     body.appendChild(deleteBtn);
@@ -258,8 +307,34 @@ function createCard(city, weather, webcams) {
 
         const t = document.createElement('div');
         const temp = Math.round(weather.main.temp);
+        const feelsLike = Math.round(weather.main.feels_like);
         const desc = weather.weather?.[0]?.description || '';
-        t.innerHTML = `<div class="temperature">${temp}°C</div><div class="description">${escapeHtml(desc)}</div>`;
+
+        // Create a container for temperature and feels like
+        const tempContainer = document.createElement('div');
+        tempContainer.className = 'temp-container';
+
+        // Current temperature
+        const tempElement = document.createElement('div');
+        tempElement.className = 'temperature';
+        tempElement.textContent = `${temp}°C`;
+
+        // Feels like temperature
+        const feelsLikeElement = document.createElement('div');
+        feelsLikeElement.className = 'feels-like';
+        feelsLikeElement.textContent = `Feels like ${feelsLike}°C`;
+
+        // Description
+        const descElement = document.createElement('div');
+        descElement.className = 'description';
+        descElement.textContent = desc;
+
+        tempContainer.appendChild(tempElement);
+        tempContainer.appendChild(feelsLikeElement);
+
+        t.appendChild(tempContainer);
+        t.appendChild(descElement);
+
         iconWrap.appendChild(icon);
         iconWrap.appendChild(t);
         right.appendChild(iconWrap);
@@ -278,28 +353,56 @@ function createCard(city, weather, webcams) {
             windDiv.appendChild(windIcon);
         }
         right.appendChild(windDiv);
-    }
+
+        if (forecast) {
+            const forecastContainer = document.createElement('div');
+            forecastContainer.className = 'forecast-container';
+
+            const forecastTitle = document.createElement('h4');
+            forecastTitle.textContent = 'Forecast';
+            forecastContainer.appendChild(forecastTitle);
+
+            // Group forecast data by day
+            const dailyForecasts = groupForecastByDay(forecast.list);
+
+            // Create forecast rows with two days each
+            for (let i = 0; i < dailyForecasts.length; i += 2) {
+                const forecastRow = document.createElement('div');
+                forecastRow.className = 'forecast-row';
+
+                // Add first day of the pair
+                const day1 = dailyForecasts[i];
+                if (day1) {
+                    const forecastItem1 = createForecastItem(day1);
+                    forecastRow.appendChild(forecastItem1);
+                }
+
+                // Add second day of the pair if it exists
+                const day2 = dailyForecasts[i + 1];
+                if (day2) {
+                    const forecastItem2 = createForecastItem(day2);
+                    forecastRow.appendChild(forecastItem2);
+                }
+
+                forecastContainer.appendChild(forecastRow);
+            }
+
+            right.appendChild(forecastContainer);
+        }
+        }
 
     body.appendChild(left);
     body.appendChild(right);
     card.appendChild(body);
+
+    // Add drag event listeners
+    card.addEventListener('dragstart', handleDragStart);
+    card.addEventListener('dragover', handleDragOver);
+    card.addEventListener('dragleave', handleDragLeave);
+    card.addEventListener('drop', handleDrop);
+    card.addEventListener('dragend', handleDragEnd);
+
     return card;
-}
-
-
-export function deleteEntry(display_index) {
-    removeEntry(display_index);
-    renderCards();
-}
-
-function text(s) {
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d;
-}
-
-function escapeHtml(s) {
-    return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
 function pickWeatherIcon(owm) {
@@ -316,15 +419,135 @@ function pickWeatherIcon(owm) {
     return 'wi-na';
 }
 
-function showBasecoatToast(category, title, description) {
-    document.dispatchEvent(new CustomEvent('basecoat:toast', {
-        detail: {
-            config: {
-                category: category,
-                title: title,
-                description: description,
-                cancel: { label: 'Dismiss' }
+function groupForecastByDay(forecastList) {
+    const dailyForecasts = {};
+    const now = new Date();
+
+    forecastList.forEach(item => {
+        const date = new Date(item.dt * 1000);
+        // Skip data points from the current day
+        if (date.toDateString() === now.toDateString()) {
+            return;
+        }
+
+        const dayKey = date.toISOString().split('T')[0];
+
+        if (!dailyForecasts[dayKey]) {
+            dailyForecasts[dayKey] = {
+                dt: item.dt,
+                temp_min: item.main.temp_min,
+                temp_max: item.main.temp_max,
+                rain: item.rain ? (item.rain['3h'] || 0) : 0,
+                weather: item.weather[0]
+            };
+        } else {
+            // Update min and max temperatures
+            if (item.main.temp_min < dailyForecasts[dayKey].temp_min) {
+                dailyForecasts[dayKey].temp_min = item.main.temp_min;
+            }
+            if (item.main.temp_max > dailyForecasts[dayKey].temp_max) {
+                dailyForecasts[dayKey].temp_max = item.main.temp_max;
+            }
+
+            // Accumulate rain
+            if (item.rain) {
+                dailyForecasts[dayKey].rain += item.rain['3h'] || 0;
             }
         }
-    }));
+    });
+
+    // Convert object to array and sort by date
+    const forecasts = Object.values(dailyForecasts).sort((a, b) => a.dt - b.dt);
+
+    // Return only the next 5 days
+    return forecasts.slice(0, 5);
+}
+
+function createForecastItem(day) {
+    const forecastItem = document.createElement('div');
+    forecastItem.className = 'forecast-item';
+
+    const date = new Date(day.dt * 1000);
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+
+    const dayElement = document.createElement('div');
+    dayElement.className = 'forecast-day';
+    dayElement.textContent = dayName;
+    forecastItem.appendChild(dayElement);
+
+    const icon = document.createElement('i');
+    icon.className = 'wi ' + pickWeatherIcon({ weather: [day.weather] });
+    forecastItem.appendChild(icon);
+
+    const temp = document.createElement('div');
+    temp.className = 'forecast-temp';
+    temp.textContent = `${Math.round(day.temp_min)}°C - ${Math.round(day.temp_max)}°C`;
+    forecastItem.appendChild(temp);
+
+    const rain = document.createElement('div');
+    rain.className = 'forecast-rain';
+    rain.textContent = `${Math.round(day.rain)}mm`;
+    forecastItem.appendChild(rain);
+
+    return forecastItem;
+}
+
+
+function handleDragStart(e) {
+    const index = e.target.dataset.index;
+    console.log('Drag Start Index:', index); // Add this line for debugging
+    e.dataTransfer.setData('text/plain', index);
+    e.target.classList.add('dragging');
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    const draggingCard = document.querySelector('.dragging');
+    const targetCard = e.target.closest('.card');
+    if (targetCard && draggingCard !== targetCard) {
+        const container = getContainer();
+        const cards = Array.from(container.querySelectorAll('.card'));
+        draggingIndex = cards.indexOf(draggingCard);
+        targetIndex = cards.indexOf(targetCard);
+
+        console.log('Dragging Index:', draggingIndex);
+        console.log('Target Index:', targetIndex);
+
+        if (draggingIndex < targetIndex) {
+            container.insertBefore(draggingCard, targetCard.nextSibling);
+        } else {
+            container.insertBefore(draggingCard, targetCard);
+        }
+    }
+}
+
+function handleDragLeave(e) {
+    e.preventDefault();
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    if (draggingIndex !== targetIndex) {
+        datamgr.moveEntry(draggingIndex, targetIndex);
+        renderCards();
+    }
+}
+
+function handleDragEnd(e) {
+    e.target.classList.remove('dragging');
+}
+
+export function deleteEntry(display_index) {
+    datamgr.removeEntry(display_index);
+    renderCards();
+}
+
+function text(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d;
+}
+
+function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
