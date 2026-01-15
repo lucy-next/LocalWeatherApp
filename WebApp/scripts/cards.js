@@ -1,6 +1,9 @@
 'use strict';
 
+// So i have both common versions of import in my Project. (I prefer this one)
 import * as datamgr from './datamgr.js';
+import * as favorites from './favorites.js';
+
 
 let draggingIndex = 0;
 let targetIndex = 0;
@@ -19,6 +22,8 @@ export function initCards() {
         results.innerHTML = '';
 
         const all = datamgr.getAll();
+
+        // See if we have the Data from the results already in our Data
         const sameLatLon = all.some(e => Math.abs(Number(e.lat) - Number(place.lat)) < 1e-6 && Math.abs(Number(e.lon) - Number(place.lon)) < 1e-6);
         const sameCityCountry = all.some(e => String(e.city || '').trim().toLowerCase() === String(place.city || '').trim().toLowerCase()
             && String(e.country_code || '').trim().toLowerCase() === String(place.country_code || '').trim().toLowerCase());
@@ -29,28 +34,20 @@ export function initCards() {
             return;
         }
 
+        // If not add the Place to the saved entry.
         datamgr.addEntry(place);
         renderCards();
     });
 }
 
-function showBasecoatToast(category, title, description) {
-    document.dispatchEvent(new CustomEvent('basecoat:toast', {
-        detail: {
-            config: {
-                category: category,
-                title: title,
-                description: description,
-                cancel: { label: 'Dismiss' }
-            }
-        }
-    }));
-}
-
+// Load all Cities and display a card for each.
 export function renderCards() {
     (async function run() {
-        const container = getContainer();
+        const container = document.querySelector('.weather-container');
         if (!container) return;
+
+        // Store the current scroll position
+        const scrollPosition = window.scrollY;
 
         container.innerHTML = '';
 
@@ -67,6 +64,9 @@ export function renderCards() {
         // Sort cities by display_index
         cities.sort((a, b) => a.display_index - b.display_index);
 
+        // Get current favorites once
+        const currentFavorites = favorites.getFavorites();
+
         for (let i = 0; i < cities.length; i++) {
             const city = cities[i];
             const loading = createLoadingCard(city.city);
@@ -76,21 +76,14 @@ export function renderCards() {
             const webcam = await loadWebcam(city, WINDY_KEY);
             const forecast = await loadForecast(city, OWM_KEY);
 
-            const card = createCard(city, weather, webcam, forecast);
+            // Pass the current favorites to the card creation
+            const card = createCard(city, weather, webcam, forecast, currentFavorites);
             container.replaceChild(card, loading);
         }
-    })();
-}
 
-function getContainer() {
-    let c = document.querySelector('.weather-container');
-    if (c) return c;
-    const app = document.querySelector('#app') || document.body;
-    c = document.createElement('div');
-    c.className = 'weather-container';
-    c.style.marginTop = '16px';
-    app.appendChild(c);
-    return c;
+        // Restore scroll position
+        window.scrollTo(0, scrollPosition);
+    })();
 }
 
 function createLoadingCard(name) {
@@ -115,12 +108,12 @@ async function loadWeather(city, key) {
             showBasecoatToast('error', 'Weather error', `OpenWeatherMap error ${r.status}`);
             return null;
         }
-        const j = await r.json();
-        if (!j || !j.main) {
-            console.warn('OWM returned no usable data for', city, j);
+        const owm = await r.json();
+        if (!owm || !owm.main) {
+            console.warn('OWM returned no usable data for', city, owm);
             return null;
         }
-        return j;
+        return owm;
     } catch (e) {
         console.error('OWM fetch error', e);
         showBasecoatToast('error', 'Weather error', 'Could not fetch weather');
@@ -144,12 +137,12 @@ async function loadForecast(city, key) {
             showBasecoatToast('error', 'Forecast error', `OpenWeatherMap error ${r.status}`);
             return null;
         }
-        const j = await r.json();
-        if (!j || !j.list || j.list.length === 0) {
-            console.warn('Forecast returned no usable data for', city, j);
+        const owm = await r.json();
+        if (!owm || !owm.list || owm.list.length === 0) {
+            console.warn('Forecast returned no usable data for', city, owm);
             return null;
         }
-        return j;
+        return owm;
     } catch (e) {
         console.error('Forecast fetch error', e);
         showBasecoatToast('error', 'Forecast error', 'Could not fetch forecast');
@@ -165,18 +158,11 @@ async function loadWebcam(city, key) {
 
     const lat = Number(city.lat);
     const lon = Number(city.lon);
-    if (!isFinite(lat) || !isFinite(lon)) {
-        console.warn('Invalid city coordinates for webcam fetch', city);
-        return null;
-    }
-
-    const radiusKm = 10; // you can adjust
+    const radiusKm = 10;
     const limit = 5;
     const include = 'player,images,location';
     const lang = 'en';
     const url = `https://api.windy.com/webcams/api/v3/webcams?nearby=${encodeURIComponent(lat)},${encodeURIComponent(lon)},${encodeURIComponent(radiusKm)}&limit=${encodeURIComponent(limit)}&include=${encodeURIComponent(include)}&lang=${encodeURIComponent(lang)}`;
-
-    console.log('Windy webcams request URL:', url);
 
     try {
         const resp = await fetch(url, { headers: { 'x-windy-api-key': key }});
@@ -194,7 +180,7 @@ async function loadWebcam(city, key) {
             return null;
         }
 
-        // Return all webcams instead of just the best one
+        // Return all webcams
         return cams;
     } catch (err) {
         console.error('loadWebcam error', err);
@@ -202,7 +188,9 @@ async function loadWebcam(city, key) {
     }
 }
 
+// Create a singular Card for a City (Main func)
 function createCard(city, weather, webcams, forecast) {
+    // Create draggable div
     const card = document.createElement('div');
     card.className = 'card w-full draggable';
     card.draggable = true;
@@ -211,6 +199,22 @@ function createCard(city, weather, webcams, forecast) {
     const body = document.createElement('div');
     body.className = 'card-body';
 
+    // Create favorite button
+    const favoriteBtn = document.createElement('button');
+    favoriteBtn.className = 'btn-favorite';
+    favoriteBtn.innerHTML = '★';
+
+    // Check if the city is already a favorite
+    if (favorites.checkFavorite(city)) {
+        favoriteBtn.classList.add('disabled');
+    }
+
+    favoriteBtn.addEventListener('click', () => {
+        favorites.favoriteManager(city);
+    });
+
+    body.appendChild(favoriteBtn);
+
     // Create delete button
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'btn-destructive remove-btn';
@@ -218,13 +222,13 @@ function createCard(city, weather, webcams, forecast) {
     deleteBtn.addEventListener('click', () => {
         deleteEntry(city.display_index);
     });
-
-    // Add delete button to the card
     body.appendChild(deleteBtn);
 
+    // Webcam on the Left
     const left = document.createElement('div');
     left.className = 'card-left';
 
+    //Apply the Webcams to a new Slider (Carousel)
     if (webcams && webcams.length > 0) {
         const carouselContainer = document.createElement('div');
         carouselContainer.className = 'webcam-carousel';
@@ -273,7 +277,6 @@ function createCard(city, weather, webcams, forecast) {
             currentIndex = (currentIndex - 1 + items.length) % items.length;
             items[currentIndex].classList.add('active');
         });
-
         nextBtn.addEventListener('click', () => {
             const items = webcamDisplay.querySelectorAll('.webcam-item');
             items[currentIndex].classList.remove('active');
@@ -289,6 +292,7 @@ function createCard(city, weather, webcams, forecast) {
         left.appendChild(text('No webcam available'));
     }
 
+    // OWM Data on the Right
     const right = document.createElement('div');
     right.className = 'card-right';
 
@@ -354,6 +358,7 @@ function createCard(city, weather, webcams, forecast) {
         }
         right.appendChild(windDiv);
 
+        // 3-4 Day Forecast
         if (forecast) {
             const forecastContainer = document.createElement('div');
             forecastContainer.className = 'forecast-container';
@@ -463,6 +468,7 @@ function groupForecastByDay(forecastList) {
     return forecasts.slice(0, 5);
 }
 
+// Each forcast Day
 function createForecastItem(day) {
     const forecastItem = document.createElement('div');
     forecastItem.className = 'forecast-item';
@@ -492,7 +498,7 @@ function createForecastItem(day) {
     return forecastItem;
 }
 
-
+// Drag abd Drop Helper Functions
 function handleDragStart(e) {
     const index = e.target.dataset.index;
     console.log('Drag Start Index:', index); // Add this line for debugging
@@ -505,7 +511,7 @@ function handleDragOver(e) {
     const draggingCard = document.querySelector('.dragging');
     const targetCard = e.target.closest('.card');
     if (targetCard && draggingCard !== targetCard) {
-        const container = getContainer();
+        const container = document.querySelector('.weather-container');
         const cards = Array.from(container.querySelectorAll('.card'));
         draggingIndex = cards.indexOf(draggingCard);
         targetIndex = cards.indexOf(targetCard);
@@ -537,11 +543,13 @@ function handleDragEnd(e) {
     e.target.classList.remove('dragging');
 }
 
+// Delete an Entry
 export function deleteEntry(display_index) {
     datamgr.removeEntry(display_index);
     renderCards();
 }
 
+// Generic Helper Functions
 function text(s) {
     const d = document.createElement('div');
     d.textContent = s;
@@ -550,4 +558,17 @@ function text(s) {
 
 function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function showBasecoatToast(category, title, description) {
+    document.dispatchEvent(new CustomEvent('basecoat:toast', {
+        detail: {
+            config: {
+                category: category,
+                title: title,
+                description: description,
+                cancel: { label: 'Dismiss' }
+            }
+        }
+    }));
 }

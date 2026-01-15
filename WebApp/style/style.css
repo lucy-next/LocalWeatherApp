@@ -109,6 +109,7 @@
 }
 
 /* Temperature Styling */
+
 .temp-container {
     display: flex;
     align-items: flex-start;
@@ -199,6 +200,7 @@
 }
 
 /* Wind info styling */
+
 .wind-info {
     display: flex;
     gap: 8px;
@@ -283,4 +285,84 @@
 
 .gap-2 {
     margin-top: 12px;
+}
+
+/* Favorite Button Styling */
+.btn-favorite {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 10;
+    background: none;
+    border: none;
+    color: var(--color-foreground);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.btn-favorite:hover {
+    transform: scale(1.2);
+}
+
+.btn-favorite.disabled {
+    color: gold;
+    cursor: pointer;
+}
+
+/* Favorite Sidebar Styling */
+.favorite-bar {
+    position: fixed;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 200px;
+    max-height: 60vh;
+    overflow-y: auto;
+    background-color: var(--color-background);
+    border-right: 1px solid var(--color-border);
+    padding: 20px 10px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.favorite-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.favorite-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 8px;
+    background-color: var(--color-muted);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+}
+
+.favorite-name {
+    font-size: 14px;
+    margin-right: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.favorite-btn {
+    color: gold;
+    cursor: pointer;
+}
+
+.favorite-btn:hover {
+    transform: scale(1.2);
 }

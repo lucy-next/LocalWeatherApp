@@ -7,7 +7,7 @@ export function LoadSearch() {
 
     let timer = null;
     const MIN_CHARS = 3;
-    const DEBOUNCE_MS = 200;
+    const DEBOUNCE_MS = 300; //Dont refresh at every Letter, only when stop Typing.
     const MAX_RESULTS = 5;
 
     input.addEventListener('keydown', (ev) => {
@@ -21,6 +21,7 @@ export function LoadSearch() {
         }
     });
 
+    // Search Handler
     input.addEventListener('input', () => {
         const v = input.value.trim();
         clearTimeout(timer);
@@ -31,10 +32,12 @@ export function LoadSearch() {
         timer = setTimeout(() => doSearch(v), DEBOUNCE_MS);
     });
 
+    // Lat / Lon Calc
     function round6(num) {
         return Math.round((num || 0) * 1e6) / 1e6;
     }
 
+    // Search for Cities
     async function doSearch(q) {
         results.innerHTML = '';
         const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=' + MAX_RESULTS + '&addressdetails=1&q=' + encodeURIComponent(q);
@@ -52,7 +55,7 @@ export function LoadSearch() {
                 const p = places[i];
                 const addr = p.address || {};
 
-                const primary = addr.city || addr.town || addr.village || addr.hamlet || '';
+                const primary = addr.city || '';
                 const countryCode = (addr.country_code || '').toLowerCase();
                 const countryName = addr.country || '';
 
@@ -83,7 +86,7 @@ export function LoadSearch() {
                 item.appendChild(title);
                 item.appendChild(sub);
 
-                // store parsed place for consumer code to use later
+                // Store parsed place for use later
                 item.place = {
                     city: primary,
                     state: addr.state || '',
@@ -95,7 +98,7 @@ export function LoadSearch() {
                     raw: p
                 };
 
-                // do NOT attach click handlers here — consumer will handle clicks
+                // do NOT attach click handlers here
                 results.appendChild(item);
             }
         } catch (err) {

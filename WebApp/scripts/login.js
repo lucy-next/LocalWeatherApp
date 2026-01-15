@@ -1,6 +1,6 @@
 'use strict';
 
-let USER_KEY = '';
+// Get all fields and add Events
 
 let namecontainer = document.getElementById("form-email");
 let passwcontainer = document.getElementById("form-password");
@@ -29,6 +29,7 @@ registerbtn.addEventListener('click', (e) => {
     Register();
 });
 
+// Parse Name & Password to find user & log them in.
 function Login () {
     if (!username || !password) {
         alert("Please enter both username and password");
@@ -39,7 +40,7 @@ function Login () {
     let passok = CheckPasswordHash(username, password);
 
     if (userok && passok) {
-        sessionStorage.setItem('STORAGE_KEY', username);
+        localStorage.setItem('STORAGE_KEY', username);
         window.location.href = "/LocalWeather-WorkExample/WebApp/weather.html";
     } else {
         alert("Invalid username or password");
@@ -50,6 +51,7 @@ function CheckUserOK (user) {
     return localStorage.getItem(user) !== null;
 }
 
+// Check if Password is correct
 function CheckPasswordHash (user, passw) {
     const userData = JSON.parse(localStorage.getItem(user));
     if (userData && userData.password) {
@@ -61,6 +63,7 @@ function CheckPasswordHash (user, passw) {
     return false;
 }
 
+// Check if Username doesnt exist and if Pass is long enough.
 function Register () {
     if (CheckUserOK(username)) {
         alert("Username already exists");
@@ -71,17 +74,17 @@ function Register () {
         return;
     }
 
-    SaveUser(username, password);
-    sessionStorage.setItem('STORAGE_KEY', username);
+    SaveUser(username, PasswordHash(password));
+    localStorage.setItem('STORAGE_KEY', username);
     window.location.href = "/LocalWeather-WorkExample/WebApp/weather.html";
 }
 
 function CheckPasswordOK (passw) {
-    const hashedPassword = PasswordHash(passw, true);
     return passw.length >= 8;
 }
 
-function PasswordHash (passw, gen = false) {
+// Hash Password // Very Oversimpliefied and shouldnt be Clientside normally.
+function PasswordHash (passw) {
     let hash = 0;
     for (let i = 0; i < passw.length; i++) {
         const char = passw.charCodeAt(i);
@@ -91,10 +94,10 @@ function PasswordHash (passw, gen = false) {
     return hash.toString();
 }
 
+// Save the User
 function SaveUser (user, passw) {
-    const hashedPassword = PasswordHash(passw, true);
     const userData = {
-        password: hashedPassword
+        password: passw
     };
     localStorage.setItem(user, JSON.stringify(userData));
 }

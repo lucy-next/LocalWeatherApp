@@ -1,19 +1,23 @@
 'use strict';
 
+// Load External JS Functions
+
 import { LoadSearch } from './search.js';
 import { renderCards, initCards } from './cards.js';
 import { clearAll } from './datamgr.js';
+import { updateSidebar } from "./favorites.js";
+
+// Fire Startup Weather Functions
 
 LoadSearch();
 initCards();
 renderCards();
+updateSidebar();
 
-
-
-// Handle Delete All Button
-const deleteButton = document.getElementById('delete');
-if (deleteButton) {
-    deleteButton.addEventListener('click', () => {
+// Delete All Button
+const deleteAllButton = document.getElementById('delete-all');
+if (deleteAllButton) {
+    deleteAllButton.addEventListener('click', () => {
         clearAll();
         renderCards();
     });
@@ -22,12 +26,7 @@ if (deleteButton) {
 // Handle Log Out
 
 let logoutcontainer = document.getElementById("logout-btn");
-
 logoutcontainer.addEventListener('click', () => {
-    LogOut();
-})
-
-function LogOut () {
-    window.STORAGE_KEY = "";
+    sessionStorage.removeItem('STORAGE_KEY');
     window.location.href = "/LocalWeather-WorkExample/WebApp/index.html";
-}
+})
